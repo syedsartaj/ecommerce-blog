@@ -136,6 +136,24 @@ export interface Newsletter {
   unsubscribedAt?: Date
 }
 
+// Simplified Post interface for blog management
+export interface Post {
+  _id?: string
+  slug: string
+  title: string
+  excerpt: string
+  content: string
+  category: string
+  image: string
+  author: string
+  products: string[] // Array of product IDs
+  publishedAt?: Date
+  featured: boolean
+  tags: string[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 // Helper function to get database
 export async function getDatabase(): Promise<Db> {
   const client = await clientPromise
@@ -166,6 +184,11 @@ export async function getCategoriesCollection(): Promise<Collection<Category>> {
 export async function getNewsletterCollection(): Promise<Collection<Newsletter>> {
   const db = await getDatabase()
   return db.collection<Newsletter>('newsletter_subscribers')
+}
+
+export async function getPostsCollection(): Promise<Collection<Post>> {
+  const db = await getDatabase()
+  return db.collection<Post>('posts')
 }
 
 // Database initialization and indexes
@@ -213,6 +236,172 @@ export async function initializeDatabase() {
   ])
 
   console.log('Database indexes created successfully')
+}
+
+// CRUD Functions for Posts
+export async function getAllPosts(options?: {
+  category?: string
+  featured?: boolean
+  limit?: number
+  skip?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}): Promise<Post[]> {
+  const collection = await getPostsCollection()
+  const query: any = {}
+
+  if (options?.category) {
+    query.category = options.category
+  }
+
+  if (options?.featured !== undefined) {
+    query.featured = options.featured
+  }
+
+  const sortOrder = options?.sortOrder === 'asc' ? 1 : -1
+  const sortBy = options?.sortBy || 'createdAt'
+
+  const posts = await collection
+    .find(query)
+    .sort({ [sortBy]: sortOrder })
+    .limit(options?.limit || 0)
+    .skip(options?.skip || 0)
+    .toArray()
+
+  return posts.map(post => ({
+    ...post,
+    _id: post._id?.toString()
+  }))
+}
+
+export async function getPosts(options?: {
+  category?: string
+  featured?: boolean
+  limit?: number
+  skip?: number
+}): Promise<Post[]> {
+  return getAllPosts(options)
+}
+
+export async function getPostById(id: string): Promise<Post | null> {
+  const collection = await getPostsCollection()
+  const { ObjectId } = require('mongodb')
+
+  try {
+    const post = await collection.findOne({ _id: new ObjectId(id) as any })
+    if (!post) return null
+
+    return {
+      ...post,
+      _id: post._id?.toString()
+    }
+  } catch (error) {
+    return null
+  }
+}
+
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  const collection = await getPostsCollection()
+  const post = await collection.findOne({ slug })
+
+  if (!post) return null
+
+  return {
+    ...post,
+    _id: post._id?.toString()
+  }
+}
+
+export async function createPost(postData: Omit<Post, '_id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
+  const collection = await getPostsCollection()
+  const now = new Date()
+
+  const newPost = {
+    ...postData,
+    createdAt: now,
+    updatedAt: now
+  }
+
+  const result = await collection.insertOne(newPost as any)
+
+  return {
+    ...newPost,
+    _id: result.insertedId.toString()
+  }
+}
+
+export async function updatePost(id: string, postData: Partial<Post>): Promise<Post | null> {
+  const collection = await getPostsCollection()
+  const { ObjectId } = require('mongodb')
+
+  try {
+    const updateData = {
+      ...postData,
+      updatedAt: new Date()
+    }
+
+    // Remove _id from update data if present
+    delete updateData._id
+
+    const result = await collection.findOneAndUpdate(
+      { _id: new ObjectId(id) as any },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    )
+
+    if (!result) return null
+
+    return {
+      ...result,
+      _id: result._id?.toString()
+    }
+  } catch (error) {
+    return null
+  }
+}
+
+export async function deletePost(id: string): Promise<boolean> {
+  const collection = await getPostsCollection()
+  const { ObjectId } = require('mongodb')
+
+  try {
+    const result = await collection.deleteOne({ _id: new ObjectId(id) as any })
+    return result.deletedCount > 0
+  } catch (error) {
+    return false
+  }
+}
+
+export async function getPostStats(): Promise<{
+  total: number
+  published: number
+  featured: number
+  byCategory: Record<string, number>
+}> {
+  const collection = await getPostsCollection()
+
+  const total = await collection.countDocuments()
+  const published = await collection.countDocuments({ publishedAt: { $exists: true, $ne: null } })
+  const featured = await collection.countDocuments({ featured: true })
+
+  // Get count by category
+  const categoryPipeline = [
+    { $group: { _id: '$category', count: { $sum: 1 } } }
+  ]
+
+  const categoryResults = await collection.aggregate(categoryPipeline).toArray()
+  const byCategory: Record<string, number> = {}
+
+  categoryResults.forEach((result: any) => {
+    byCategory[result._id] = result.count
+  })
+
+  return {
+    total,
+    published,
+    featured,
+    byCategory
+  }
 }
 
 export default clientPromise
