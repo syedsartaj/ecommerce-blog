@@ -2,7 +2,7 @@ import { Clock, User, Tag } from 'lucide-react'
 import Image from 'next/image'
 
 interface BlogPost {
-  id: number
+  id: number | string
   title: string
   excerpt: string
   image: string
@@ -11,6 +11,7 @@ interface BlogPost {
   date: string
   readTime: string
   productMentions?: string[]
+  slug?: string
 }
 
 interface BlogCardProps {
@@ -65,7 +66,7 @@ export default function BlogCard({ post }: BlogCardProps) {
 
         {/* Title */}
         <h3 className="font-playfair text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors line-clamp-2">
-          <a href={`/blog/${post.id}`}>{post.title}</a>
+          <a href={`/blog/${post.slug || post.id}`}>{post.title}</a>
         </h3>
 
         {/* Excerpt */}
@@ -77,7 +78,7 @@ export default function BlogCard({ post }: BlogCardProps) {
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <span className="text-sm text-gray-500">{post.date}</span>
           <a
-            href={`/blog/${post.id}`}
+            href={`/blog/${post.slug || post.id}`}
             className="text-emerald-600 hover:text-emerald-700 font-semibold text-sm flex items-center gap-1 group/link"
           >
             Read More

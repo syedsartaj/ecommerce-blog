@@ -2,76 +2,30 @@ import BlogCard from '@/components/BlogCard'
 import ProductCard from '@/components/ProductCard'
 import ReviewSection from '@/components/ReviewSection'
 import { ArrowRight, TrendingUp, Star, Package } from 'lucide-react'
+import { getSmakslyBlogs, formatBlogDate, estimateReadTime, SmakslyBlog } from '@/lib/smaksly-blogs'
 
-// Sample data - replace with actual database queries
-const featuredPosts = [
-  {
-    id: 1,
-    title: "10 Must-Have Kitchen Gadgets That Will Change Your Cooking",
-    excerpt: "Discover the innovative kitchen tools that professional chefs swear by. From smart scales to precision thermometers, these gadgets will elevate your culinary game.",
-    image: "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800&h=500&fit=crop",
-    category: "Kitchen & Home",
-    author: "Sarah Johnson",
-    date: "Dec 10, 2024",
-    readTime: "8 min read",
-    productMentions: ["Smart Kitchen Scale", "Digital Thermometer"],
-  },
-  {
-    id: 2,
-    title: "The Ultimate Guide to Sustainable Fashion in 2024",
-    excerpt: "Learn how to build a sustainable wardrobe without breaking the bank. We review eco-friendly brands and share tips for conscious shopping.",
-    image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=500&fit=crop",
-    category: "Fashion",
-    author: "Michael Chen",
-    date: "Dec 8, 2024",
-    readTime: "10 min read",
-    productMentions: ["Organic Cotton Tees", "Recycled Denim"],
-  },
-  {
-    id: 3,
-    title: "Best Smart Home Devices for Beginners: A Complete Setup Guide",
-    excerpt: "Starting your smart home journey? This comprehensive guide covers the essential devices, setup tips, and automation ideas for your first smart home.",
-    image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=800&h=500&fit=crop",
-    category: "Tech & Electronics",
-    author: "David Park",
-    date: "Dec 5, 2024",
-    readTime: "12 min read",
-    productMentions: ["Smart Speaker", "Smart Bulbs"],
-  },
-  {
-    id: 4,
-    title: "Skincare Routine Essentials: Dermatologist-Approved Products",
-    excerpt: "Build an effective skincare routine with these expert-recommended products. We break down each step and review the best options for every skin type.",
-    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=800&h=500&fit=crop",
-    category: "Beauty & Health",
-    author: "Emma Williams",
-    date: "Dec 3, 2024",
-    readTime: "7 min read",
-    productMentions: ["Vitamin C Serum", "Hyaluronic Acid"],
-  },
-  {
-    id: 5,
-    title: "Work From Home Setup: Ergonomic Essentials Under $500",
-    excerpt: "Create a productive and comfortable home office without overspending. Our budget-friendly guide features ergonomic chairs, desks, and accessories.",
-    image: "https://images.unsplash.com/photo-1593062096033-9a26b09da705?w=800&h=500&fit=crop",
-    category: "Office & Productivity",
-    author: "James Taylor",
-    date: "Dec 1, 2024",
-    readTime: "9 min read",
-    productMentions: ["Ergonomic Chair", "Standing Desk"],
-  },
-  {
-    id: 6,
-    title: "Fitness Gear Review: Top Equipment for Home Workouts",
-    excerpt: "Stay fit at home with these highly-rated fitness products. From resistance bands to smart yoga mats, we tested them all so you don't have to.",
-    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=500&fit=crop",
-    category: "Fitness & Sports",
-    author: "Lisa Anderson",
-    date: "Nov 28, 2024",
-    readTime: "6 min read",
-    productMentions: ["Resistance Bands Set", "Yoga Mat Pro"],
-  },
-]
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+// Transform SmakslyBlog to the format expected by BlogCard
+function transformBlogForCard(blog: SmakslyBlog) {
+  // Extract first 200 characters from body for excerpt
+  const plainText = blog.body.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+  const excerpt = plainText.substring(0, 200) + (plainText.length > 200 ? '...' : '')
+
+  return {
+    id: blog.id,
+    slug: blog.slug,
+    title: blog.title,
+    excerpt: excerpt,
+    image: blog.image_url || "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&h=500&fit=crop",
+    category: blog.category || "Blog",
+    author: "Editorial Team",
+    date: formatBlogDate(blog.publish_date),
+    readTime: estimateReadTime(blog.body),
+    productMentions: [],
+  }
+}
 
 const featuredProducts = [
   {
@@ -116,7 +70,11 @@ const featuredProducts = [
   },
 ]
 
-export default function Home() {
+export default async function Home() {
+  // Fetch blogs from Smaksly database
+  const smakslyBlogs = await getSmakslyBlogs()
+  const featuredPosts = smakslyBlogs.slice(0, 6).map(transformBlogForCard)
+
   return (
     <>
       {/* Hero Section */}
@@ -186,18 +144,26 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredPosts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
+          {featuredPosts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredPosts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">No blog posts available yet. Check back soon!</p>
+            </div>
+          )}
 
-          <div className="mt-12 text-center md:hidden">
-            <button className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold">
-              View All Posts
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
+          {featuredPosts.length > 0 && (
+            <div className="mt-12 text-center md:hidden">
+              <button className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold">
+                View All Posts
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
