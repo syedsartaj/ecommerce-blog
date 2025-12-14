@@ -1,7 +1,5 @@
 'use client';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { useState } from 'react';
 
 export default function ContactPage() {
@@ -27,9 +25,7 @@ export default function ContactPage() {
   };
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-gray-50 to-gray-100 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -241,8 +237,6 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
-      </main>
-      <Footer />
-    </>
+      </div>
   );
 }

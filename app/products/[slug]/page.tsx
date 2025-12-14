@@ -1,7 +1,5 @@
 'use client';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -96,9 +94,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
   ];
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
         {/* Breadcrumb */}
         <nav className="bg-gray-50 py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -326,8 +322,6 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
             </div>
           </div>
         </section>
-      </main>
-      <Footer />
-    </>
+      </div>
   );
 }
